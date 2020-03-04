@@ -22,10 +22,20 @@ function swissbibBBLocationLookupInitialize () {
 		];
 		
 	libraryCodeUBBeOnline = "B405";
-	
+
 	// Was mit ExWi machen?
 
-		
+	// Online-Subskriptionen
+
+	onlineSubscribed = "The Oxford handbook of";
+	
+	/* Dann noch:
+	"Cambridge Companions Online" (CCO) = E-Books der "Cambridge companion to ..." 
+	"Cambridge History Online" (CHO) = E-Books der "Cambridge history of …" 
+	"Oxford History Online" (OHO) = E-Books der "Oxford history of …" 
+	Implementieren wir über Liste...
+	*/
+
 	// SRU-URL
 	sruPrefix = "http://sru.swissbib.ch/sru/search/bbdb?query=+dc.identifier+any+";
 	sruSuffix = "&operation=searchRetrieve&recordSchema=info%3Asrw%2Fschema%2F1%2Fmarcxml-v1.1-light&maximumRecords=10&x-info-10-get-holdings=true&startRecord=0&recordPacking=XML&availableDBs=defaultdb&sortKeys=Submit+query";
@@ -37,9 +47,10 @@ function swissbibBBLocationLookupInitialize () {
 	isInUBBeText= 'IDS BB Standortcheck: UB Bern ja';
 	isinUBBeKurierbibText = 'IDS BB Standortcheck: UB Bern Kurierbibliothek';
 	isInUBBeOnlineText = 'IDS BB Standortcheck: UB Bern Online';
+	isInUBBeOnlineSubscribedText = "IDS BB Standortcheck: Online-Subskription";
 	idsbbBEpossibly = 'IDS BB Standortcheck: UB Bern eventuell';
 
-	tags = [isInUBBeOnlineText, isWithoutISBNText, isInUBBeText, isinUBBeKurierbibText, isNotInUBBEText, idsbbBEpossibly];
+	tags = [isInUBBeOnlineText, isWithoutISBNText, isInUBBeText, isinUBBeKurierbibText, isNotInUBBEText, isInUBBeOnlineSubscribedText, idsbbBEpossibly];
 
 };
 
@@ -112,7 +123,7 @@ return (checksum == lastDigit);
 
 
 // Tags hinzufügen je nach Status; ausserdem die Zähler hochsetzen
-function ApplyTags(item,isInUBBe,isinUBBeKurierbib,isInUBBeOnline,isWithoutISBN) {
+function ApplyTags(item,isInUBBe,isinUBBeKurierbib,isInUBBeOnline,isWithoutISBN,isInUBBeOnlineSubscribed) {
 	// eventuell vorhandene alte Tags löschen
 	for (const tag of tags) {
 		if (item.hasTag(tag)) {
@@ -144,6 +155,10 @@ function ApplyTags(item,isInUBBe,isinUBBeKurierbib,isInUBBeOnline,isWithoutISBN)
 	if (isInUBBeOnline == true) {
 		item.addTag(isInUBBeOnlineText);
 	}
+	// An UB Bern Online subskribiert aber noch nicht da!
+	if ((isInUBBeOnlineSubscribed == true) && (isInUBBeOnline == false)) {
+		item.addTag(isInUBBeOnlineSubscribedText);
+	}
   if (status=="eventuell") {
     item.addTag(idsbbBEpossibleText);
   }
@@ -153,6 +168,7 @@ function printResults() {
 	results = items.length + " Einträge verarbeitet\n" + itemWithLocation + " Einträge mit Standort an UB Bern\n" + itemWithoutLocation + " Einträge ohne Standort an UB Bern\n" + itemWithoutISBN + " Einträge ohne ISBN"; 
 	alert(results);
 }
+
 
 //XML Parsen
 function processXML(item,xml) {
@@ -223,9 +239,11 @@ function processXML(item,xml) {
 			if (holdingLibrary == libraryCodeUBBeOnline || holdingLibrary == "Bern UB Online") isInUBBeOnline = true;
 		}
 	}
+	// Subskriptionen prüfen
+	let isInUBBeOnlineSubscribed = isInUBBeOnlineSubscribedTest(item);
 
 	// Tags setzen
-	ApplyTags(item,isInUBBe,isinUBBeKurierbib,isInUBBeOnline,isWithoutISBN);
+	ApplyTags(item,isInUBBe,isinUBBeKurierbib,isInUBBeOnline,isWithoutISBN,isInUBBeOnlineSubscribed);
 
 	// Holdings speichern
 	// Im Feld Zusammenfassung
@@ -237,6 +255,14 @@ function processXML(item,xml) {
 	// ??? VAR1 note.parentKey = item.key;
   // ??? ODER note.parentID = item.id;
 	// note.saveTx();
+}
+
+function isInUBBeOnlineSubscribedTest (item) {
+	if (item.getField('title').startsWith("The Oxford Handbook of")) {
+		return true;
+	} else {
+		return false;
+	}
 }
 
 //////////////////////////////////////////////////////////////////
@@ -265,7 +291,9 @@ async function swissbibBBLocationLookup() {
 			let isInUBBeOnline = false;
 			let isinUBBeKurierbib = false;
 			let isWithoutISBN = true;
-			ApplyTags(item,isInUBBe,isinUBBeKurierbib,isInUBBeOnline,isWithoutISBN);
+			let isInUBBeOnlineSubscribed = isInUBBeOnlineSubscribedTest(item);
+
+			ApplyTags(item,isInUBBe,isinUBBeKurierbib,isInUBBeOnline,isWithoutISBN,isInUBBeOnlineSubscribed);
 			await item.saveTx();
 		} else {
 			// Mindestens eine gültige ISBN vorhanden

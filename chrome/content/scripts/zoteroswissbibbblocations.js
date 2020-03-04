@@ -26,16 +26,14 @@ function swissbibBBLocationLookupInitialize () {
 	// Was mit ExWi machen?
 
 	// Online-Subskriptionen
+	//onlineSubscribed = "The Oxford handbook of";
 
-	onlineSubscribed = "The Oxford handbook of";
+	onlineSubscribed = [
+		"The Oxford Handbook of",
+		"The Cambridge Companion to",
+		"The Oxford History of",
+	]
 	
-	/* Dann noch:
-	"Cambridge Companions Online" (CCO) = E-Books der "Cambridge companion to ..." 
-	"Cambridge History Online" (CHO) = E-Books der "Cambridge history of …" 
-	"Oxford History Online" (OHO) = E-Books der "Oxford history of …" 
-	Implementieren wir über Liste...
-	*/
-
 	// SRU-URL
 	sruPrefix = "http://sru.swissbib.ch/sru/search/bbdb?query=+dc.identifier+any+";
 	sruSuffix = "&operation=searchRetrieve&recordSchema=info%3Asrw%2Fschema%2F1%2Fmarcxml-v1.1-light&maximumRecords=10&x-info-10-get-holdings=true&startRecord=0&recordPacking=XML&availableDBs=defaultdb&sortKeys=Submit+query";
@@ -240,7 +238,7 @@ function processXML(item,xml) {
 		}
 	}
 	// Subskriptionen prüfen
-	let isInUBBeOnlineSubscribed = isInUBBeOnlineSubscribedTest(item);
+	let isInUBBeOnlineSubscribed = isInUBBeOnlineSubscribedTest(item,onlineSubscribed);
 
 	// Tags setzen
 	ApplyTags(item,isInUBBe,isinUBBeKurierbib,isInUBBeOnline,isWithoutISBN,isInUBBeOnlineSubscribed);
@@ -257,11 +255,9 @@ function processXML(item,xml) {
 	// note.saveTx();
 }
 
-function isInUBBeOnlineSubscribedTest (item) {
-	if (item.getField('title').startsWith("The Oxford Handbook of")) {
-		return true;
-	} else {
-		return false;
+function isInUBBeOnlineSubscribedTest (item,subscriptions) {
+	for (const subscription of subscriptions) {
+		if (item.getField('title').startsWith(subscription)) return true;
 	}
 }
 
@@ -291,7 +287,7 @@ async function swissbibBBLocationLookup() {
 			let isInUBBeOnline = false;
 			let isinUBBeKurierbib = false;
 			let isWithoutISBN = true;
-			let isInUBBeOnlineSubscribed = isInUBBeOnlineSubscribedTest(item);
+			let isInUBBeOnlineSubscribed = isInUBBeOnlineSubscribedTest(item,onlineSubscribed);
 
 			ApplyTags(item,isInUBBe,isinUBBeKurierbib,isInUBBeOnline,isWithoutISBN,isInUBBeOnlineSubscribed);
 			await item.saveTx();
